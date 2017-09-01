@@ -9,10 +9,11 @@ from flask import request
 
 app = flask.Flask(__name__)
 app.config['SECRET_KEY'] = 'REPLACE WITH RANDOM STRING ;-)'
-queue = collections.deque()
+queue = collections.deque(["foo", "bar"])
 
 @app.route('/', methods=['GET', 'POST'])
 def view_index():
+  flask.flash("An example Flash message (eg. invalid URL)")
   if request.method == 'POST' and 'queue-url' in request.form:
     info = urlparse(request.form['queue-url'])
     params = parse_qs(info.query)
@@ -44,4 +45,4 @@ def view_queue_pop():
 
 
 if require.main == module:
-  app.run(host='0.0.0.0')
+  app.run(host='0.0.0.0', debug=True)

@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "author": "niklas",
   "license": "MIT",
+  "main": "app.py",
   "extensions": [
     "!require-import-syntax",
     "@nodepy/werkzeug-reloader-patch"

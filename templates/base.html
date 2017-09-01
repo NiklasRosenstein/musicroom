@@ -1,0 +1,21 @@
+<!DOCTYPE>
+<html>
+  <head>
+    <meta charset=utf8>
+    <!-- D3.js -->
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+    <!-- jQuery (required by Semantic UI) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <!-- Semantic UI -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.2.13/semantic.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.2.13/semantic.min.css">
+    <!-- Local -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    {% block head %}
+    {% endblock %}
+  </head>
+  <body>
+    {% block body %}
+    {% endblock %}
+  </body>
+</html>

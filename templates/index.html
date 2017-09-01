@@ -1,63 +1,158 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>Burda Meetup - Music Queue</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.10.0/d3.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-request/1.0.5/d3-request.min.js"></script>
-  </head>
-  <body>
-
-    <div class="flashes">
-      <!-- Flash Messages -->
-      {% with messages = get_flashed_messages() %}
-        {% if messages %}
-          <div class=row>
-            <ul class=flashes>
-              {% for message in messages %}
-                <li>{{ message }}</li>
-              {% endfor %}
-            </ul>
-          </div>
-        {% endif %}
-      {% endwith %}
+{% extends "base.html" %}
+{% block head %}
+  <title>Music Room</title>
+  <!-- YouTube Player API -->
+  <script src="http://www.youtube.com/player_api"></script>
+  <!-- SoundCloud Player API -->
+  <script src="https://w.soundcloud.com/player/api.js"></script>
+{% endblock %}
+{% block body %}
+  <div class="ui inverted vertical center aligned segment head"><div class="head-container">
+    <div class="ui text container">
+      <h1 class="ui inverted header">Music Room</h1>
+      <h3>Listen to music together with your friends.</h3>
     </div>
-
-    <!-- Add URL form -->
-    <div class="row">
-      <div class="col col-12">
-        <h1>Add URL</h1>
-        <form id="upload-form" method="post">
-          <label for="queue-url">Youtube URL</label>
-          <input name="queue-url">
-          <input type="submit" value="Submit">
-        </form>
+    <hr/>
+    <div class="ui player">
+      <h2 class="current-title" style="display:none"></h2>
+      <div id="yt-player" style="display:none"></div>
+      <iframe id="sc-player" height="450" width="100%" scrolling="no" frameborder="no" style="display:none"></iframe>
+    </div>
+  </div></div>
+  <div class="ui vertical aligned segment head"><div class="head-container">
+    <h1>Add a Song</h1>
+    <!-- Flash Messages: These should be rendered dynamically from JavaScript -->
+    {% with messages = get_flashed_messages() %}
+      {% for message in messages %}
+        <div class="ui negative message">
+          <p>{{ message }}</p>
+        </div>
+      {% endfor %}
+    {% endwith %}
+    <form class="ui form">
+      <div class="field">
+        <label>YouTube/SoundCloud URL</label>
+        <input type="text" name="url" placeholder="https://www.youtube.com/watch?v=e8T_fzSY34s">
       </div>
-    </div>
-
-      <!-- Queue List -->
-      <div class="row">
-        <div class="col col-12">
-        <h1>Queue</h1>
-        <div id="queue" class="col col-6">
+      <button class="ui button" type="submit">Submit</button>
+    </form>
+  </div></div>
+  <div class="ui inverted vertical aligned segment head"><div class="head-container">
+    <hr/>
+    <h1>Queue</h1>
+    <!-- Queue List -->
+    <div class="ui inverted relaxed divided list">
+      <div class="item">
+        <i class="large music middle aligned icon"></i>
+        <div class="content">
+          <a class="header">Purity Ring - Sea Castle</a>
+          <div class="description">https://www.youtube.com/watch?v=e8T_fzSY34s</div>
         </div>
       </div>
-
+      <div class="item">
+        <i class="large music middle aligned icon"></i>
+        <div class="content">
+          <a class="header">ENiGMA Dubz ft KT - Dancefloor (Variationz Album SAMP)</a>
+          <div class="description">https://soundcloud.com/enigmadubz/enigma-dubz-ft-kt-dancefloor</div>
+        </div>
+      </div>
     </div>
+  </div></div>
 
-    <script>
-      function updateQueue() {
-        d3.json('/api/queue', function (data) {
-          queue = data
-          d3.select('#queue').selectAll('div').data(queue)
-            .attr('class', 'music-item')
-            .enter()
-            .append('div')
-            .html(String)
-            .exit()
-            .remove()
+  <script>
+    function setPlayerTitle(title) {
+      let h2 = document.querySelector('.head .player .current-title')
+      h2.innerText = title
+      $(h2).show()
+    }
+
+    /* YouTube */
+    let yt_delayedPlay = null
+    let yt_player = null
+
+    function youTubePlayVideo(videoId) {
+      if (!YT.Player) {
+        /* Play as soon as the YT API is ready. */
+        yt_delayedPlay = videoId
+        return
+      }
+
+      if (!yt_player) {
+        yt_player = new YT.Player('yt-player', {
+          width: '640',
+          height: '390',
+          videoId: videoId,
+          events: {
+            onReady: onYouTubePlayerReady,
+            onStateChange: onYoutTubePlayerStateChange
+          }
         })
       }
-      updateQueue()
-    </script>
-  </body>
-</html>
+      else {
+        yt_player.loadVideoById(videoId)
+      }
+    }
+
+    function youTubeShow(show) {
+      let el = $('#yt-player')
+      if (show) el.show()
+      else el.hide()
+    }
+
+    function onYouTubePlayerReady() {
+      console.log('YT Player: ready', ... arguments)
+    }
+
+    function onYoutTubePlayerStateChange () {
+      console.log('YT Player: state changed', ... arguments)
+    }
+
+    function onYouTubePlayerAPIReady() {
+      if (yt_delayedPlay) {
+        youTubePlayVideo(yt_delayedPlay)
+        yt_delayedPlay = null
+      }
+    }
+
+    /* SoundCloud */
+    let sc_player = null
+    let sc_baseurl = "https://w.soundcloud.com/player/?color=ff5500&amp;auto_play=false&amp;"
+                    + "hide_related=false&amp;show_comments=true&amp;show_user=true&amp;"
+                    + "show_reposts=false&amp;visual=true&amp;url=";
+
+    function soundCloudPlayURL(url) {
+      let iframe = document.getElementById('sc-player')
+      iframe.src = sc_baseurl + url;
+
+      sc_player = SC.Widget(iframe)
+      sc_player.bind(SC.Widget.Events.READY, onSoundCloudPlayerReady)
+      sc_player.bind(SC.Widget.Events.LOAD_PROGRESS, onSoundCloudPlayerStateChange)
+      sc_player.bind(SC.Widget.Events.PLAY_PROGRESS, onSoundCloudPlayerStateChange)
+      sc_player.bind(SC.Widget.Events.PLAY, onSoundCloudPlayerStateChange)
+      sc_player.bind(SC.Widget.Events.PAUSE, onSoundCloudPlayerStateChange)
+      sc_player.bind(SC.Widget.Events.FINISH, onSoundCloudPlayerStateChange)
+      sc_player.bind(SC.Widget.Events.SEEK, onSoundCloudPlayerStateChange)
+    }
+
+    function soundCloudShow(show) {
+      let el = $('#sc-player')
+      if (show) el.show()
+      else el.hide()
+    }
+
+    function onSoundCloudPlayerReady() {
+      console.log('SC Player: ready', ... arguments)
+    }
+
+    function onSoundCloudPlayerStateChange() {
+      console.log('SC Player: state changed', ... arguments)
+    }
+
+    // TEST:
+    setPlayerTitle("Purity Ring - Sea Castle")
+    soundCloudShow(false)
+    youTubeShow(true)
+    youTubePlayVideo("e8T_fzSY34s")
+    //soundCloudPlayURL("https://api.soundcloud.com/tracks/17760669")
+  </script>
+  {% endblock %}
