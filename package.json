@@ -3,13 +3,15 @@
   "version": "1.0.0",
   "author": "niklas",
   "license": "MIT",
+  "resolve_root": "mroom/",
   "main": "app.py",
   "extensions": [
     "!require-import-syntax",
     "@nodepy/werkzeug-reloader-patch"
   ],
   "python-dependencies": {
-    "Flask": ">=0.12.2"
+    "Flask": ">=0.12.2",
+    "cassandra-driver": ">=3.11.0"
   },
   "dependencies": {
     "@nodepy/werkzeug-reloader-patch": "~0.0.4"

@@ -29,10 +29,11 @@
         </div>
       {% endfor %}
     {% endwith %}
-    <form class="ui form">
+    <form class="ui form" id="add-song-form" method="post" action="/api/submit" onsubmit="submitSongUrl(event)">
       <div class="field">
         <label>YouTube/SoundCloud URL</label>
         <input type="text" name="url" placeholder="https://www.youtube.com/watch?v=e8T_fzSY34s">
+        <input type="text" name="room" hidden value="{{ room.name }}">
       </div>
       <button class="ui button" type="submit">Submit</button>
     </form>
@@ -60,6 +61,29 @@
   </div></div>
 
   <script>
+
+    function post(url, form, callback) {
+      let data = $.param(form);
+      console.log(data)
+      return d3.request(url)
+        .header("Content-type", "application/x-www-form-urlencoded")
+        .on("error", function(progress) { callback(progress.target) })
+        .on("load", function(progress) { callback(progress.target) })
+        .send("POST", data)
+    }
+
+    function submitSongUrl(event) {
+      event.preventDefault()
+      let form = {}
+      d3.selectAll("#add-song-form input").each(function (d) {
+        form[this.name] = this.value
+      })
+      post("/api/submit", form, function(xhr) {
+        let data = JSON.parse(xhr.responseText)
+        alert(data.message)
+      })
+    }
+
     function setPlayerTitle(title) {
       let h2 = document.querySelector('.head .player .current-title')
       h2.innerText = title

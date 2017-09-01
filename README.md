@@ -14,5 +14,6 @@ __Technology__
   [Node.py]: https://nodepy.org/
 
 * Python + [Node.py] with Flask
+* Apachage Cassandra
 * JavaScript with YouTube API, SoundCloud API, jQuery, d3
 * SemanticUI
