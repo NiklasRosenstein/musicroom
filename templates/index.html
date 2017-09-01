@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% block head %}
   <title>Music Room</title>
+  <!-- Handlebars -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.0.10/handlebars.min.js"></script>
   <!-- YouTube Player API -->
   <script src="http://www.youtube.com/player_api"></script>
   <!-- SoundCloud Player API -->
@@ -21,14 +23,9 @@
   </div></div>
   <div class="ui vertical aligned segment head"><div class="head-container">
     <h1>Add a Song</h1>
-    <!-- Flash Messages: These should be rendered dynamically from JavaScript -->
-    {% with messages = get_flashed_messages() %}
-      {% for message in messages %}
-        <div class="ui negative message">
-          <p>{{ message }}</p>
-        </div>
-      {% endfor %}
-    {% endwith %}
+    <div class="ui message" style="display:none">
+      <p></p>
+    </div>
     <form class="ui form" id="add-song-form" method="post" action="/api/submit" onsubmit="submitSongUrl(event)">
       <div class="field">
         <label>YouTube/SoundCloud URL</label>
@@ -42,48 +39,94 @@
     <hr/>
     <h1>Queue</h1>
     <!-- Queue List -->
-    <div class="ui inverted relaxed divided list">
-      <div class="item">
-        <i class="large music middle aligned icon"></i>
-        <div class="content">
-          <a class="header">Purity Ring - Sea Castle</a>
-          <div class="description">https://www.youtube.com/watch?v=e8T_fzSY34s</div>
+    <div class="ui inverted relaxed divided list" id="queue">
+      {% raw %}
+      <script id="handlebars:queue-item" type="text/x-handlebars-template">
+        <div class="item">
+          <i class="large {{ icon }} middle aligned icon"></i>
+          <div class="content">
+            <a class="header">{{ title }}</a>
+            <div class="description">{{ url }}</div>
+          </div>
         </div>
-      </div>
-      <div class="item">
-        <i class="large music middle aligned icon"></i>
-        <div class="content">
-          <a class="header">ENiGMA Dubz ft KT - Dancefloor (Variationz Album SAMP)</a>
-          <div class="description">https://soundcloud.com/enigmadubz/enigma-dubz-ft-kt-dancefloor</div>
-        </div>
-      </div>
+      </script>
+      {% endraw %}
     </div>
   </div></div>
 
   <script>
+    // Queue-item template.
+    var queueItemTemplate = Handlebars.compile(document.getElementById('handlebars:queue-item').innerHTML)
+    function renderQueueItem(song) {
+      return $(queueItemTemplate({
+        title: song.title,
+        url: song.url,
+        icon: song.type
+      })).data(song)
+    }
 
+    // Load the queued items.
+    d3.json("/api/queue?room={{room.name}}", function (data) {
+      console.log(data)
+      for (let i = 0; i < data.data.length; ++i) {
+        $('#queue').append(renderQueueItem(data.data[i]))
+      }
+    })
+
+    // Helper function to retrieve the song that is currently being played.
+    function getCurrentSong(callback) {
+      return d3.json("/api/current-song?room={{room.name}}", function (data) {
+        callback(data.data, data.status, data.message)
+      })
+    }
+
+    // Helper function to send a post request.
     function post(url, form, callback) {
       let data = $.param(form);
       console.log(data)
       return d3.request(url)
         .header("Content-type", "application/x-www-form-urlencoded")
-        .on("error", function(progress) { callback(progress.target) })
-        .on("load", function(progress) { callback(progress.target) })
+        .on("error", function(progress) { callback(progress.target, progress) })
+        .on("load", function(xhr) { callback(xhr) })
         .send("POST", data)
     }
 
+    // Callback for the "Add a Song" form.
     function submitSongUrl(event) {
       event.preventDefault()
       let form = {}
       d3.selectAll("#add-song-form input").each(function (d) {
         form[this.name] = this.value
       })
-      post("/api/submit", form, function(xhr) {
+      post("/api/submit", form, function(xhr, progress) {
         let data = JSON.parse(xhr.responseText)
-        alert(data.message)
+        let song = data.data;
+
+        /* Remove all existing classes. */
+        let message = d3.select('.head .ui.message')
+          .classed('positive', false)
+          .classed('negative', false)
+          .classed('info', false)
+
+        /* Insert the message with the right class. */
+        $(message.node()).show()
+        if (data.status == 200) {
+          if (song.alreadyInQueue)
+            message.classed('info', true).text('The song is already in the queue: ' + song.title)
+          else
+            message.classed('positive', true).text('The song was added to the queue.')
+        }
+        else {
+          message.classed('negative', true).text(data.message)
+        }
+
+        if (data.status == 200 && !song.alreadyInQueue) {
+          $('#queue').append(renderQueueItem(song))
+        }
       })
     }
 
+    // Sets the title above the Player.
     function setPlayerTitle(title) {
       let h2 = document.querySelector('.head .player .current-title')
       h2.innerText = title
@@ -172,11 +215,11 @@
       console.log('SC Player: state changed', ... arguments)
     }
 
-    // TEST:
-    setPlayerTitle("Purity Ring - Sea Castle")
-    soundCloudShow(false)
-    youTubeShow(true)
-    youTubePlayVideo("e8T_fzSY34s")
-    //soundCloudPlayURL("https://api.soundcloud.com/tracks/17760669")
+
+
+    // Update our current song.
+    getCurrentSong(function (song) {
+      console.log('CURRENTLY PLAYING:', song)
+    })
   </script>
   {% endblock %}

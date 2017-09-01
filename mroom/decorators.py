@@ -68,6 +68,7 @@ def restify(debug=None):
         data['data'] = result
         data['message'] = message
       data.setdefault('data', None)
+      data.setdefault('message', None)
       return flask.Response(json.dumps(data), status=data['status'], mimetype='application/json')
     return wrapper
   return decorator
