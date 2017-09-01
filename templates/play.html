@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Burda Meetup - Music Player</title>
+    <script src="http://www.youtube.com/player_api"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.10.0/d3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-request/1.0.5/d3-request.min.js"></script>
+  </head>
+  <body>
+    <a href="javascript:playNext()">Next</a>
+    <a href="javascript:player.pauseVideo()">Pause</a>
+    <a href="javascript:player.playVideo()">Play</a>
+    <div id=player></div>
+    <script>
+      var queue = [];
+      var player;
+
+      function playNext() {
+        console.log('playNext()')
+        d3.json('/api/queue-pop', function (data) {
+          if (data.videoId) {
+            player.loadVideoById({
+              videoId: data.videoId,
+              startSeconds: 0
+            })
+          }
+        })
+      }
+
+      function onPlayerReady() {
+        playNext();
+      }
+
+      function onPlayerStateChange() {
+        var state = player.getPlayerState();
+        if (state == 0 /* ended */ || state == -1 /* unstarted */) {
+          playNext();
+        }
+      }
+
+      d3.interval(onPlayerStateChange, 5000)
+
+      function onYouTubePlayerAPIReady() {
+        player = new YT.Player('player', {
+          width: '640',
+          height: '390',
+          videoId: 'M7lc1UVf-VE',
+          events: {
+            onReady: onPlayerReady,
+            onStateChange: onPlayerStateChange
+          }
+        });
+      }
+    </script>
+  </body>
+</html>
