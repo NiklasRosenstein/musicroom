@@ -7,7 +7,9 @@ to the queue.
 
 ## Screenshots
 
-<img height="100px" src="https://i.imgur.com/fYzsesE.png" alt="screenshot">
+<p align="center">
+  <img height="400px" src="https://i.imgur.com/MfHd3gc.png" alt="screenshot">
+</p>
 
 ## Todo
 
