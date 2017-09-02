@@ -65,10 +65,35 @@ def queue():
   return [x.to_dict() for x in room.queue]
 
 
+@app.route('/api/skip-song', methods=['POST'])
+@decorators.restify()
+@models.session
+def skip_song():
+  """
+  Skips the currently played song.
+  """
+
+  room = models.Room.get(name=request.args.get('room'))
+  if not room:
+    return None, 404
+
+  song = room.queue.select().first()
+  if song:
+    room.history.add(song)
+    room.queue.remove(song)
+    models.commit()
+
+  room.song = song
+  room.song_starttime = datetime.now() if song else None
+
+
 @app.route('/api/current-song')
 @decorators.restify()
 @models.session
 def current_song():
+  """
+  Updates the room's currently played song and returns it.
+  """
 
   room = models.Room.get(name=request.args.get('room'))
   if not room:
@@ -87,8 +112,8 @@ def current_song():
         break
       # Discard this song into the rooms history.
       time_passed -= current_duration
-      room.history.append(song)
-      song = room.queue.filter().first()
+      room.history.add(song)
+      song = room.queue.select().first()
       if song:
         room.queue.remove(song)
 
@@ -99,7 +124,7 @@ def current_song():
 
   # Get the next song from the queue.
   if song is None:
-    song = room.queue.filter().first()
+    song = room.queue.select().first()
     if song:
       room.queue.remove(song)
       time_passed = timedelta(seconds=0)

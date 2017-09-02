@@ -16,9 +16,14 @@
     </div>
     <hr/>
     <div class="ui player">
-      <h2 class="current-title" style="display:none"></h2>
-      <div id="yt-player" style="display:none"></div>
-      <iframe id="sc-player" height="450" width="100%" scrolling="no" frameborder="no" style="display:none"></iframe>
+      <div class="fifteen wide column">
+        <h2 class="current-title" style="display:none"></h2>
+        <div id="yt-player" style="display:none"></div>
+        <iframe id="sc-player" height="450" width="100%" scrolling="no" frameborder="no" style="display:none"></iframe>
+      </div>
+    </div>
+    <div class="ui text container">
+      <a style="color:white; font-size:150%" href="javascript:skipSong()"><i class="lerge forward icon"></i></a>
     </div>
   </div></div>
   <div class="ui vertical aligned segment head"><div class="head-container">
@@ -53,6 +58,11 @@
       {% endraw %}
     </div>
   </div></div>
+  <div class="ui text vertical center aligned segment">
+    <p>Copyright &copy; Niklas Rosenstein 2017</p>
+    <p><i class="github icon"></i><a href="https://github.com/NiklasRosenstein/musicroom">NiklasRosenstein/musicroom</a></p>
+  </div>
+
 
   <script>
     // Queue-item template.
@@ -88,9 +98,16 @@
       console.log(data)
       return d3.request(url)
         .header("Content-type", "application/x-www-form-urlencoded")
-        .on("error", function(progress) { callback(progress.target, progress) })
-        .on("load", function(xhr) { callback(xhr) })
+        .on("error", function(progress) { if (callback) callback(progress.target, progress) })
+        .on("load", function(xhr) { if (callback) callback(xhr) })
         .send("POST", data)
+    }
+
+    // Callback for the "Skip" button.
+    function skipSong() {
+      post("/api/skip-song?room={{room.name}}", {}, function () {
+        updateCurrentSong()
+      })
     }
 
     // Callback for the "Add a Song" form.
@@ -131,8 +148,12 @@
     // Sets the title above the Player.
     function setPlayerTitle(title) {
       let h2 = document.querySelector('.head .player .current-title')
-      h2.innerText = title
-      $(h2).show()
+      if (title) {
+        h2.innerText = title
+        $(h2).show()
+      }
+      else
+        $(h2).hide()
     }
 
     /* YouTube */
@@ -180,7 +201,11 @@
     }
 
     function onYoutTubePlayerStateChange () {
-      console.log('YT Player: state changed', ... arguments)
+      let state = yt_player.getPlayerState()
+      if (state == 0) { // Ended
+        updateCurrentSong()
+      }
+      console.log('YT Player: state changed', state)
     }
 
     function onYouTubePlayerAPIReady() {
@@ -225,18 +250,39 @@
     }
 
 
-    // Update our current song.
-    getCurrentSong(function (_song) {
-      song = _song
-      if (song) {
-        setPlayerTitle(song.title)
-        if (song.classtype == 'YtSong') {
-          youTubePlay()
+    function updateCurrentSong() {
+      getCurrentSong(function (new_song) {
+        if (new_song) {
+          /* If the song is going to end soon, we update again, soon. */
+          let remaining = new_song.duration - new_song.time_passed
+          if (remaining < 5) {
+            console.log("Song is about to end soon. Retrying update in", remaining + 0.5, "seconds.")
+            setTimeout(updateCurrentSong, (remaining + 0.5) * 1000)
+          }
+
+          /* If it's the same song, there's no need to update. */
+          if (song && new_song.id == song.id) {
+            console.log("Got the same song. Skipping player update")
+            return
+          }
+
+          song = new_song
+          setPlayerTitle(song.title)
+          if (song.classtype == 'YtSong') {
+            youTubePlay()
+          }
         }
-      }
-      else {
-        console.log("NOTHING TO PLAY")
-      }
-    })
+        else {
+          if (yt_player) yt_player.stopVideo()
+          setPlayerTitle(null)
+          youTubeShow(false)
+
+          console.log("We really don't have anything to play. Check again in 2s")
+          setTimeout(updateCurrentSong, 2000)
+        }
+      })
+    }
+
+    updateCurrentSong()
   </script>
   {% endblock %}
