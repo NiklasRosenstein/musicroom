@@ -63,7 +63,7 @@ class YtSong(Song):
 
   @property
   def url(self):
-    return 'https://www.youtube.com/watch?v=' + self.video_id
+    return 'https://youtu.be/' + self.video_id
 
 class ScSong(Song):
   path = Required(str)
