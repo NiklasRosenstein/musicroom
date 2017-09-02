@@ -11,12 +11,19 @@ to the queue.
 
 ## Technology
 
-  [Node.py]: https://nodepy.org/
-
-* Python + [Node.py] with Flask
-* Apache Cassandra
-* JavaScript with YouTube API, SoundCloud API, jQuery, d3
-* SemanticUI
+* [CPython 3.6](https://www.python.org/)
+  * [Node.py](https://nodepy.org/)
+  * [Flask](http://flask.pocoo.org/)
+  * [PonyORM](https://python-orm.com/)
+* [PostgreSQL](https://www.postgresql.org/)
+* JavaScript
+  * [YouTube Player API](https://developers.google.com/youtube/v3/docs/videos/list)
+  * [SoundCloud HTML5 Widget API](https://developers.soundcloud.com/docs/api/html5-widget#methods)
+  * [jQuery](https://jquery.com/)
+  * [d3](https://d3js.org/)
+  * [Handlebars](http://handlebarsjs.com/)
+* Css
+  * [Semantic UI](https://semantic-ui.com/download)
 
 ## Configuration
 

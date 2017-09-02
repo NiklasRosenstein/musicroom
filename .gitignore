@@ -1,2 +1,3 @@
 nodepy_modules/
 *.py[co]
+conf.py

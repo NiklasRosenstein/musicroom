@@ -67,7 +67,7 @@
 
     // Load the queued items.
     d3.json("/api/queue?room={{room.name}}", function (data) {
-      console.log(data)
+      console.log('QUEUE:', data.data)
       for (let i = 0; i < data.data.length; ++i) {
         $('#queue').append(renderQueueItem(data.data[i]))
       }
@@ -134,13 +134,17 @@
     }
 
     /* YouTube */
+    let song = null
     let yt_delayedPlay = null
     let yt_player = null
 
-    function youTubePlayVideo(videoId) {
+    function youTubePlay() {
+      youTubeShow(true)
+      soundCloudShow(false)
+
       if (!YT.Player) {
         /* Play as soon as the YT API is ready. */
-        yt_delayedPlay = videoId
+        yt_delayedPlay = song
         return
       }
 
@@ -148,7 +152,7 @@
         yt_player = new YT.Player('yt-player', {
           width: '640',
           height: '390',
-          videoId: videoId,
+          videoId: song.video_id,
           events: {
             onReady: onYouTubePlayerReady,
             onStateChange: onYoutTubePlayerStateChange
@@ -156,8 +160,9 @@
         })
       }
       else {
-        yt_player.loadVideoById(videoId)
+        yt_player.loadVideoById(song.video_id)
       }
+
     }
 
     function youTubeShow(show) {
@@ -167,7 +172,9 @@
     }
 
     function onYouTubePlayerReady() {
-      console.log('YT Player: ready', ... arguments)
+      // Start playing the video
+      yt_player.playVideo()
+      yt_player.seekTo(song.time_passed)
     }
 
     function onYoutTubePlayerStateChange () {
@@ -176,7 +183,7 @@
 
     function onYouTubePlayerAPIReady() {
       if (yt_delayedPlay) {
-        youTubePlayVideo(yt_delayedPlay)
+        youTubePlay()
         yt_delayedPlay = null
       }
     }
@@ -216,10 +223,18 @@
     }
 
 
-
     // Update our current song.
-    getCurrentSong(function (song) {
-      console.log('CURRENTLY PLAYING:', song)
+    getCurrentSong(function (_song) {
+      song = _song
+      if (song) {
+        setPlayerTitle(song.title)
+        if (song.classtype == 'YtSong') {
+          youTubePlay()
+        }
+      }
+      else {
+        console.log("NOTHING TO PLAY")
+      }
     })
   </script>
   {% endblock %}

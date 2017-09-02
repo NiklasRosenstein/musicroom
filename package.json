@@ -4,7 +4,7 @@
   "author": "niklas",
   "license": "MIT",
   "resolve_root": "mroom/",
-  "main": "app.py",
+  "main": "manage.py",
   "extensions": [
     "!require-import-syntax",
     "@nodepy/werkzeug-reloader-patch"

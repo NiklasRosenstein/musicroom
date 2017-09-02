@@ -21,6 +21,7 @@
 from datetime import datetime, timedelta
 from flask import request
 from urllib.parse import urlparse, parse_qs
+
 import collections
 import contextlib
 import flask
@@ -29,100 +30,100 @@ import os
 import decorators from './decorators'
 import models from './models'
 import youtube from './youtube'
-import conf from '../conf.json'
 
 
 app = flask.Flask(__name__)
-app.config['SECRET_KEY'] = conf['web']['secretKey']
 
 
 @app.route('/room/<room_name>')
+@models.session
 def room(room_name):
   """
   Visiting a room automatically creates it if it doesn't already exist.
   """
 
-  room = models.Room.objects(name=room_name).first()
+  room = models.Room.get(name=room_name)
   if not room:
-    room = models.Room.create(name=room_name)
+    room = models.Room(name=room_name)
+    models.commit()
 
   return flask.render_template('index.html', room=room)
 
 
 @app.route('/api/queue')
 @decorators.restify()
+@models.session
 def queue():
   """
   Returns a JSON representation of the the songs in the queue.
   """
 
-  room_name = request.args.get('room')
-  room = models.Room.objects(name=room_name).first()
-  if not room_name or not room:
+  room = models.Room.get(name=request.args.get('room'))
+  if not room:
     return None, 404
 
-  songs = models.Song.filter(id__in=room.queued)
-  return [x.to_json() for x in songs]
+  return [x.to_dict() for x in room.queue]
 
 
 @app.route('/api/current-song')
 @decorators.restify()
+@models.session
 def current_song():
-  room_name = request.args.get('room')
-  room = models.Room.objects(name=room_name).first()
-  if not room_name or not room:
+
+  room = models.Room.get(name=request.args.get('room'))
+  if not room:
     return None, 404
 
   now = datetime.now()
-
-  print('/api/current-song')
-  if room.current_song_id is None:
-    song = None
-  else:
-    song = models.Song.objects(id=room.current_song_id).first()
-  print('  SONG:', song, song.title if song else None)
+  song = room.song
 
   # Check if this song has already stopped. Also consume as many items
   # as necessary to find the song that is currently playing.
-  if song and room.current_song_starttime is not None:
-    time_passed = now - timedelta(seconds=room.current_song_starttime)
-    print('  TIME PASSED:', time_passed)
+  if song and room.song_starttime is not None:
+    time_passed = now - room.song_starttime
     while song:
-      current_duration = timedelta(seconds=song.duration_in_seconds)
-      print('    CURRENT DURATION:', current_duration)
+      current_duration = timedelta(seconds=song.duration)
       if time_passed < current_duration:
         break
       # Discard this song into the rooms history.
       time_passed -= current_duration
-      room.history.append(song.id)
-      song = None
-      if room.queued:
-        song = models.Song.objects(id=room.queued.pop(0)).first()
-      print('      NEXT SONG:', song)
+      room.history.append(song)
+      song = room.queue.filter().first()
+      if song:
+        room.queue.remove(song)
 
     if not song:
       time_passed = None
   else:
     time_passed = None
 
-  if song is None and room.queued:
-    song = models.Song.filter(id=room.queued.pop(0)).get()
-    time_passed = timedelta(seconds=0)
+  # Get the next song from the queue.
+  if song is None:
+    song = room.queue.filter().first()
+    if song:
+      room.queue.remove(song)
+      time_passed = timedelta(seconds=0)
 
-  print('  FINAL SONG:', repr(song))
-  print('  FINAL TIME PASSED:', time_passed)
-  room.current_song_id = song.id if song else None
-  room.current_song_starttime = now + time_passed if time_passed else None
-  room.save()
+  # We should never end up with a song but no time since it started
+  # playing, or the other way round.
+  assert bool(song) == (time_passed is not None)
 
-  return {
-    'song': song.to_json() if song else None,
-    'time_passed': time_passed.total_seconds() if time_passed else None
-  }
+  room.song = song
+  room.song_starttime = now - time_passed if time_passed is not None else None
+  models.commit()
+
+  # Prepare the result
+  if song:
+    result = song.to_dict() if song else None
+    result['time_passed'] = time_passed.total_seconds()
+  else:
+    result = None
+  return result
 
 
 @app.route('/api/submit', methods=['POST'])
 @decorators.restify()
+@models.session
 def submit():
   """
   REST end-point to add a song to the queue of a room.
@@ -130,7 +131,8 @@ def submit():
 
   if not 'room' in request.form or not 'url' in request.form:
     return None, 400, "Invalid form parameters"
-  room = models.Room.objects(name=request.form['room']).first()
+
+  room = models.Room.get(name=request.form['room'])
   if not room:
     return None, 400, "Invalid room {!r}".format(request.form['room'])
 
@@ -151,17 +153,13 @@ def submit():
       return None, 400, str(e)
 
     song = models.create_or_update(
-      models.YouTubeSong,
-      primary_keys = ['video_id'],
-      video_id = video['id'],
+      models.YtSong,
+      filter_keys = ['video_id'],
       title = video['snippet']['title'],
-      live_broadcast = video['snippet']['liveBroadcastContent'],
-      duration = video['contentDetails']['duration'],
-      definition = video['contentDetails']['definition']
+      video_id = video['id'],
+      duration = youtube.parse_duration(video['contentDetails']['duration'])
     )
-    song.save()
-    print(">>> NEW SONG:", song)
-    print('    ', dict(song.items()))
+    models.commit()
 
   elif 'soundcloud' in url.netloc:
     return None, 501, "SoundCloud is not yet implemented."
@@ -169,16 +167,10 @@ def submit():
     raise RuntimeError
 
   # Check if the song is already in the rooms queue.
-  in_queue = song.id in room.queued
-  result = {'title': song.title, 'duration': song.duration_in_seconds,
-            'alreadyInQueue': in_queue, 'url': song.url, 'type': song.type}
-  if not in_queue:
-    room.queued.append(song.id)
-    room.save()
+  result = song.to_dict()
+  result['alreadyInQueue'] = song.id in room.queue
+  if not result['alreadyInQueue']:
+    room.queue.add(song)
 
+  models.commit()
   return result, 200
-
-
-if require.main == module:
-  app.run(host=conf['web']['host'], port=conf['web']['port'],
-          debug=conf['web']['debug'])

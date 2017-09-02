@@ -19,9 +19,9 @@
 
 import re
 import requests
-import conf from '../conf.json'
+import conf from '../conf'
 
-API_KEY = conf['auth']['google']['apiKey']
+API_KEY = conf.google_api_key
 
 
 def video(video_id, parts=['snippet', 'contentDetails']):
