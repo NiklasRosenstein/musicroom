@@ -158,7 +158,7 @@
         /* Insert the message with the right class. */
         $(message.node()).show()
         if (data.status == 200) {
-          if (song.alreadyInQueue)
+          if (song.already_in_queue)
             message.classed('info', true).text('The song is already in the queue: ' + song.title)
           else
             message.classed('positive', true).text('The song was added to the queue.')
@@ -167,7 +167,7 @@
           message.classed('negative', true).text(data.message)
         }
 
-        if (data.status == 200 && !song.alreadyInQueue) {
+        if (data.status == 200 && !song.already_in_queue) {
           $('#queue').append(renderQueueItem(song))
         }
       })

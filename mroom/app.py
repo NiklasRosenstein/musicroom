@@ -208,8 +208,8 @@ def submit():
 
   # Check if the song is already in the rooms queue.
   result = song.to_dict()
-  result['alreadyInQueue'] = song.id in room.queue
-  if not result['alreadyInQueue']:
+  result['already_in_queue'] = song in room.queue
+  if not result['already_in_queue']:
     room.queue.add(song)
 
   models.commit()
