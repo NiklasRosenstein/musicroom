@@ -5,8 +5,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.0.10/handlebars.min.js"></script>
   <!-- YouTube Player API -->
   <script src="http://www.youtube.com/player_api"></script>
-  <!-- SoundCloud Player API -->
-  <script src="https://w.soundcloud.com/player/api.js"></script>
 {% endblock %}
 {% block body %}
   <div class="ui inverted vertical center aligned segment head"><div class="head-container">
@@ -19,7 +17,6 @@
       <div class="fifteen wide column">
         <h2 class="current-title" style="display:none"></h2>
         <div id="yt-player" style="display:none"></div>
-        <iframe id="sc-player" height="450" width="100%" scrolling="no" frameborder="no" style="display:none"></iframe>
       </div>
     </div>
     <div class="ui text container">
@@ -33,7 +30,7 @@
     </div>
     <form class="ui form" id="add-song-form" method="post" action="/api/submit" onsubmit="submitSongUrl(event)">
       <div class="field">
-        <label>YouTube/SoundCloud URL</label>
+        <label>YouTube URL</label>
         <input type="text" name="url" placeholder="https://www.youtube.com/watch?v=e8T_fzSY34s">
         <input type="text" name="room" hidden value="{{ room.name }}">
       </div>
@@ -191,7 +188,6 @@
 
     function youTubePlay() {
       youTubeShow(true)
-      soundCloudShow(false)
 
       if (!YT.Player) {
         /* Play as soon as the YT API is ready. */
@@ -241,40 +237,6 @@
         youTubePlay()
         yt_delayedPlay = null
       }
-    }
-
-    /* SoundCloud */
-    let sc_player = null
-    let sc_baseurl = "https://w.soundcloud.com/player/?color=ff5500&amp;auto_play=false&amp;"
-                    + "hide_related=false&amp;show_comments=true&amp;show_user=true&amp;"
-                    + "show_reposts=false&amp;visual=true&amp;url=";
-
-    function soundCloudPlayURL(url) {
-      let iframe = document.getElementById('sc-player')
-      iframe.src = sc_baseurl + url;
-
-      sc_player = SC.Widget(iframe)
-      sc_player.bind(SC.Widget.Events.READY, onSoundCloudPlayerReady)
-      sc_player.bind(SC.Widget.Events.LOAD_PROGRESS, onSoundCloudPlayerStateChange)
-      sc_player.bind(SC.Widget.Events.PLAY_PROGRESS, onSoundCloudPlayerStateChange)
-      sc_player.bind(SC.Widget.Events.PLAY, onSoundCloudPlayerStateChange)
-      sc_player.bind(SC.Widget.Events.PAUSE, onSoundCloudPlayerStateChange)
-      sc_player.bind(SC.Widget.Events.FINISH, onSoundCloudPlayerStateChange)
-      sc_player.bind(SC.Widget.Events.SEEK, onSoundCloudPlayerStateChange)
-    }
-
-    function soundCloudShow(show) {
-      let el = $('#sc-player')
-      if (show) el.show()
-      else el.hide()
-    }
-
-    function onSoundCloudPlayerReady() {
-      console.log('SC Player: ready', ... arguments)
-    }
-
-    function onSoundCloudPlayerStateChange() {
-      console.log('SC Player: state changed', ... arguments)
     }
 
 

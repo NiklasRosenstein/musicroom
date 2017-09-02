@@ -1,9 +1,7 @@
 # Music Room
 
-A web application to listen to music together with your friends. Choose your
-favorite room name by choosing the appropriate URL (eg. `/room/my-room`) and
-share the link with your friends. Everyone that joins the room can add songs
-to the queue.
+Listen to music together with your friends. Collaborate on the playlist that
+you all want to enjoy.
 
 ## Screenshots
 
@@ -26,7 +24,6 @@ to the queue.
 * [PostgreSQL](https://www.postgresql.org/)
 * JavaScript
   * [YouTube Player API](https://developers.google.com/youtube/v3/docs/videos/list)
-  * [SoundCloud HTML5 Widget API](https://developers.soundcloud.com/docs/api/html5-widget#methods)
   * [jQuery](https://jquery.com/)
   * [d3](https://d3js.org/)
   * [Handlebars](http://handlebarsjs.com/)

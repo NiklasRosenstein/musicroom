@@ -65,14 +65,6 @@ class YtSong(Song):
   def url(self):
     return 'https://youtu.be/' + self.video_id
 
-class ScSong(Song):
-  path = Required(str)
-  song_id = Required(str)
-
-  @property
-  def url(self):
-    raise NotImplementedError
-
 
 db.bind(**conf.database)
 db.generate_mapping(create_tables=True)

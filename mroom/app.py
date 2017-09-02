@@ -179,16 +179,25 @@ def submit():
   url = urlparse(request.form['url'])
 
   # Validate the URL scheme and host.
-  HOSTS = ['www.youtube.com', 'youtube.com', 'www.soundcloud.com' 'soundcloud.com']
+  HOSTS = ['www.youtube.com', 'youtube.com', 'youtu.be']
   if url.scheme not in ('', 'http', 'https') or url.netloc not in HOSTS:
-    return None, 400, "Not a YouTube/SoundCloud URL."
+    return None, 400, "Not a YouTube URL."
 
+  # Parse the Youtube Video ID.
   if 'youtube' in url.netloc:
     query = parse_qs(url.query)
     if 'v' not in query or len(query['v']) != 1:
       return None, 400, "This is a YouTube URL, but it looks like there's not Video ID."
+    yt_video_id = query['v'][0]
+  elif 'youtu.be' in url.netloc:
+    yt_video_id = url.path.lstrip('/')
+  else:
+    yt_video_id = None
+
+  # Create/update the YouTube Song.
+  if yt_video_id:
     try:
-      video = youtube.video(query['v'][0])
+      video = youtube.video(yt_video_id)
     except ValueError as e:
       return None, 400, str(e)
 
@@ -201,8 +210,6 @@ def submit():
     )
     models.commit()
 
-  elif 'soundcloud' in url.netloc:
-    return None, 501, "SoundCloud is not yet implemented."
   else:
     raise RuntimeError
 
