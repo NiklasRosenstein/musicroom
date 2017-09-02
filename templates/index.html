@@ -58,10 +58,12 @@
     // Queue-item template.
     var queueItemTemplate = Handlebars.compile(document.getElementById('handlebars:queue-item').innerHTML)
     function renderQueueItem(song) {
+      let icon = 'music'
+      if (song.classtype == 'YtSong') icon = 'youtube'
       return $(queueItemTemplate({
         title: song.title,
         url: song.url,
-        icon: song.type
+        icon: icon
       })).data(song)
     }
 

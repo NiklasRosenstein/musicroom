@@ -52,14 +52,26 @@ class Song(db.Entity):
   history_in = Set(Room, reverse='history')
   queued_in = Set(Room, reverse='queue')
 
+  def to_dict(self):
+    result = super().to_dict()
+    result['url'] = self.url
+    return result
+
 
 class YtSong(Song):
   video_id = Required(str)
 
+  @property
+  def url(self):
+    return 'https://www.youtube.com/watch?v=' + self.video_id
 
 class ScSong(Song):
   path = Required(str)
   song_id = Required(str)
+
+  @property
+  def url(self):
+    raise NotImplementedError
 
 
 db.bind(**conf.database)
