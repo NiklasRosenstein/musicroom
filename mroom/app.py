@@ -31,6 +31,7 @@ import random
 import decorators from './decorators'
 import models from './models'
 import youtube from './youtube'
+import namegen from './namegen'
 
 
 app = flask.Flask(__name__)
@@ -42,11 +43,7 @@ def index():
   Presents a form to go to a new room.
   """
 
-  adjectives = ['violet', 'red', 'blue', 'nasty', 'fugly', 'godly']
-  noun1 = ['crack', 'butter', 'hermite', 'dragon']
-  noun2 = ['nutters', 'raiders', 'lovers', 'strippers', 'suckers']
-
-  funny_name = '{}-{}-{}'.format(*map(random.choice, (adjectives, noun1, noun2)))
+  funny_name = namegen()
   return flask.render_template('index.html', funny_name=funny_name)
 
 
