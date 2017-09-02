@@ -11,8 +11,6 @@
   ],
   "python-dependencies": {
     "Flask": ">=0.12.2",
-    "cassandra-driver": ">=3.11.0",
-    "google-api-python-client": ">=1.6.3",
     "pony": ">=0.7.2",
     "psycopg2": ">=2.7.3.1",
     "requests": ">=2.18.4"
