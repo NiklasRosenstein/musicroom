@@ -6,23 +6,22 @@
   <!-- YouTube Player API -->
   <script src="http://www.youtube.com/player_api"></script>
 {% endblock %}
-{% block body %}
-  <div class="ui inverted vertical center aligned segment head"><div class="head-container">
-    <div class="ui text container">
-      <h1 class="ui inverted header">Music Room</h1>
-      <h3>Listen to music together with your friends.</h3>
+
+{% block head_block %}
+  {{ super() }}
+  <hr/>
+  <div class="ui player">
+    <div class="fifteen wide column">
+      <h2 class="current-title" style="display:none"></h2>
+      <div id="yt-player" style="display:none"></div>
     </div>
-    <hr/>
-    <div class="ui player">
-      <div class="fifteen wide column">
-        <h2 class="current-title" style="display:none"></h2>
-        <div id="yt-player" style="display:none"></div>
-      </div>
-    </div>
-    <div class="ui text container">
-      <a style="color:white; font-size:150%" href="javascript:skipSong()"><i class="lerge forward icon"></i></a>
-    </div>
-  </div></div>
+  </div>
+  <div class="ui text container">
+    <a style="color:white; font-size:150%" href="javascript:skipSong()"><i class="lerge forward icon"></i></a>
+  </div>
+{% endblock %}
+
+{% block after_head_block %}
   <div class="ui vertical aligned segment head"><div class="head-container">
     <h1>Add a Song</h1>
     <div class="ui message" style="display:none">
@@ -70,7 +69,6 @@
     <p>Copyright &copy; Niklas Rosenstein 2017</p>
     <p><i class="github icon"></i><a href="https://github.com/NiklasRosenstein/musicroom">NiklasRosenstein/musicroom</a></p>
   </div>
-
 
   <script>
     // Queue-item template.

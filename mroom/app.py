@@ -47,7 +47,7 @@ def room(room_name):
     room = models.Room(name=room_name)
     models.commit()
 
-  return flask.render_template('index.html', room=room)
+  return flask.render_template('room.html', room=room)
 
 
 @app.route('/api/queue')
