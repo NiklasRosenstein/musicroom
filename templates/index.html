@@ -42,20 +42,31 @@
   </div></div>
   <div class="ui inverted vertical aligned segment head"><div class="head-container">
     <hr/>
-    <h1>Queue</h1>
-    <!-- Queue List -->
-    <div class="ui inverted relaxed divided list" id="queue">
-      {% raw %}
-      <script id="handlebars:queue-item" type="text/x-handlebars-template">
-        <div class="item">
-          <i class="large {{ icon }} middle aligned icon"></i>
-          <div class="content">
-            <a class="header">{{ title }}</a>
-            <div class="description">{{ url }}</div>
+    <div class="ui grid">
+      <div class="row">
+        <div class="eight wide column">
+          <h1>Queue</h1>
+          <!-- Queue List -->
+          <div class="ui inverted relaxed divided list" id="queue">
+            {% raw %}
+            <script id="handlebars:queue-item" type="text/x-handlebars-template">
+              <div class="item">
+                <i class="large {{ icon }} middle aligned icon"></i>
+                <div class="content">
+                  <a onclick="onQueueItemClick.apply(this)" class="header">{{ title }}</a>
+                  <div class="description">{{ url }}</div>
+                </div>
+              </div>
+            </script>
+            {% endraw %}
           </div>
         </div>
-      </script>
-      {% endraw %}
+        <div class="eight wide column">
+          <h1>History</h1>
+          <div class="ui inverted relaxed divided list" id="history">
+          </div>
+        </div>
+      </div>
     </div>
   </div></div>
   <div class="ui text vertical center aligned segment">
@@ -77,11 +88,28 @@
       })).data(song)
     }
 
-    // Load the queued items.
+    function onQueueItemClick() {
+      // If an item in the history is clicked, we queue it again.
+      let item = this.parentNode.parentNode;
+      if (item.parentNode.id == 'history') {
+        let song = $(item).data();
+        let form = $('#add-song-form')
+        $('input[name="url"]', form)[0].value = song.url
+        form.submit()
+      }
+    }
+
+    // Load the queued items and room history.
     d3.json("/api/queue?room={{room.name}}", function (data) {
       console.log('QUEUE:', data.data)
       for (let i = 0; i < data.data.length; ++i) {
         $('#queue').append(renderQueueItem(data.data[i]))
+      }
+    })
+    d3.json("/api/history?room={{room.name}}", function (data) {
+      console.log('history:', data.data)
+      for (let i = 0; i < data.data.length; ++i) {
+        $('#history').append(renderQueueItem(data.data[i]))
       }
     })
 

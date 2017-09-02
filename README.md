@@ -9,6 +9,12 @@ to the queue.
 
 <img height="100px" src="https://i.imgur.com/fYzsesE.png" alt="screenshot">
 
+## Todo
+
+* Keep order in the queue and history (currently implemented as a Pony ORM `Set`)
+* Also, allow duplicates in the room history
+* Ability to remove songs, and to move them up//down in the queue
+
 ## Technology
 
 * [CPython 3.6](https://www.python.org/)

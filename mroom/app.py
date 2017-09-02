@@ -65,6 +65,21 @@ def queue():
   return [x.to_dict() for x in room.queue]
 
 
+@app.route('/api/history')
+@decorators.restify()
+@models.session
+def history():
+  """
+  Returns a JSON representation of the the songs in the history.
+  """
+
+  room = models.Room.get(name=request.args.get('room'))
+  if not room:
+    return None, 404
+
+  return [x.to_dict() for x in room.history]
+
+
 @app.route('/api/skip-song', methods=['POST'])
 @decorators.restify()
 @models.session
