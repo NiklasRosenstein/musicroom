@@ -20,6 +20,7 @@
 
 from datetime import datetime, timedelta
 from flask import request
+from pony.orm import db_session, commit
 from urllib.parse import urlparse, parse_qs
 
 import collections
@@ -48,7 +49,7 @@ def index():
 
 
 @app.route('/room/<room_name>')
-@models.session
+@db_session
 def room(room_name):
   """
   Visiting a room automatically creates it if it doesn't already exist.
@@ -57,14 +58,14 @@ def room(room_name):
   room = models.Room.get(name=room_name)
   if not room:
     room = models.Room(name=room_name)
-    models.commit()
+    commit()
 
   return flask.render_template('room.html', room=room)
 
 
 @app.route('/api/queue')
 @decorators.restify()
-@models.session
+@db_session
 def queue():
   """
   Returns a JSON representation of the the songs in the queue.
@@ -79,7 +80,7 @@ def queue():
 
 @app.route('/api/history')
 @decorators.restify()
-@models.session
+@db_session
 def history():
   """
   Returns a JSON representation of the the songs in the history.
@@ -94,7 +95,7 @@ def history():
 
 @app.route('/api/skip-song', methods=['POST'])
 @decorators.restify()
-@models.session
+@db_session
 def skip_song():
   """
   Skips the currently played song.
@@ -104,19 +105,12 @@ def skip_song():
   if not room:
     return None, 404
 
-  song = room.queue.select().first()
-  if song:
-    room.history.add(song)
-    room.queue.remove(song)
-    models.commit()
-
-  room.song = song
-  room.song_starttime = datetime.now() if song else None
+  room.skip_song()
 
 
 @app.route('/api/current-song')
 @decorators.restify()
-@models.session
+@db_session
 def current_song():
   """
   Updates the room's currently played song and returns it.
@@ -126,56 +120,20 @@ def current_song():
   if not room:
     return None, 404
 
-  now = datetime.now()
-  song = room.song
+  song, time_passed = room.update_song()
+  commit()
 
-  # Check if this song has already stopped. Also consume as many items
-  # as necessary to find the song that is currently playing.
-  if song and room.song_starttime is not None:
-    time_passed = now - room.song_starttime
-    while song:
-      current_duration = timedelta(seconds=song.duration)
-      if time_passed < current_duration:
-        break
-      # Discard this song into the rooms history.
-      time_passed -= current_duration
-      room.history.add(song)
-      song = room.queue.select().first()
-      if song:
-        room.queue.remove(song)
-
-    if not song:
-      time_passed = None
-  else:
-    time_passed = None
-
-  # Get the next song from the queue.
-  if song is None:
-    song = room.queue.select().first()
-    if song:
-      room.queue.remove(song)
-      time_passed = timedelta(seconds=0)
-
-  # We should never end up with a song but no time since it started
-  # playing, or the other way round.
-  assert bool(song) == (time_passed is not None)
-
-  room.song = song
-  room.song_starttime = now - time_passed if time_passed is not None else None
-  models.commit()
-
-  # Prepare the result
   if song:
-    result = song.to_dict() if song else None
+    result = song.to_dict()
     result['time_passed'] = time_passed.total_seconds()
   else:
-    result = None
+    result = {}
   return result
 
 
 @app.route('/api/submit', methods=['POST'])
 @decorators.restify()
-@models.session
+@db_session
 def submit():
   """
   REST end-point to add a song to the queue of a room.
@@ -220,7 +178,7 @@ def submit():
       video_id = video['id'],
       duration = youtube.parse_duration(video['contentDetails']['duration'])
     )
-    models.commit()
+    commit()
 
   else:
     raise RuntimeError
@@ -231,5 +189,5 @@ def submit():
   if not result['already_in_queue']:
     room.queue.add(song)
 
-  models.commit()
+  commit()
   return result, 200

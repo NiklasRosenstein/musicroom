@@ -16,3 +16,6 @@ database = {
 
 # Google API key with access to the YouTube Data API.
 google_api_key = "Google API KEY Here"
+
+# The number of seconds between two songs.
+seconds_between_songs = 2.0
