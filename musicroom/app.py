@@ -34,7 +34,7 @@ import youtube from './youtube'
 import namegen from './namegen'
 
 
-app = flask.Flask(__name__)
+app = flask.Flask(__name__, root_path=__directory__)
 
 
 @app.route('/')

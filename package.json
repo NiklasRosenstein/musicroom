@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "author": "niklas",
   "license": "MIT",
-  "resolve_root": "mroom/",
+  "resolve_root": "musicroom/",
   "main": "manage.py",
   "extensions": [
     "!require-import-syntax",
