@@ -67,7 +67,73 @@
   </div></div>
 
   <script>
-    // Queue-item template.
+    var Musicroom = {
+      name: "{{room.name}}",
+      socket: io.connect(),
+      emit: function (event, ...arguments) {
+        console.log('emit(' + event + ')')
+        Musicroom.socket.emit(event, Musicroom.name, ...arguments)
+      }
+    };
+
+    Musicroom.socket.on('connect', function () {
+      Musicroom.emit('join')
+      Musicroom.emit('get current song')
+      Musicroom.emit('get queue and history')
+    })
+
+    Musicroom.socket.on('current song', function (new_song) {
+      console.log('>>> Current Song:', new_song)
+      if (new_song) {
+        /* If it's the same song, there's no need to update. */
+        if (song && new_song.id == song.id) {
+          console.log("Got the same song. Skipping player update")
+          return
+        }
+
+        song = new_song
+        setPlayerTitle(song.title)
+        if (song.classtype == 'YtSong') {
+          youTubePlay()
+        }
+      }
+      else {
+        if (yt_player) yt_player.stopVideo()
+        setPlayerTitle(null)
+        youTubeShow(false)
+      }
+    })
+
+    Musicroom.socket.on('queue and history', function (data) {
+      console.log('>>> Queue and history:', data)
+      for (let i = 0; i < data.queue.length; ++i) {
+        $('#queue').append(renderQueueItem(data.queue[i]))
+      }
+      for (let i = 0; i < data.history.length; ++i) {
+        $('#history').append(renderQueueItem(data.history[i]))
+      }
+    })
+
+    Musicroom.socket.on('put song', function (data) {
+      // Remove all existing classes.
+      let message = d3.select('.head .ui.message')
+        .classed('positive', false)
+        .classed('negative', false)
+        .classed('info', false)
+
+      // Insert the message with the right class.
+      if (data.error)
+        message.classed('negative', true).text(data.error)
+      else if (data.song) {
+        message.classed('positive', true).text('The song was added to the queue.')
+        $('#queue').append(renderQueueItem(data.song))
+        $('form#add-song-form input[name="url"]')[0].value = ""
+      }
+
+      $(message.node()).show()
+    })
+
+    /* Render the Handlebars template for an item in the queue or history. */
     var queueItemTemplate = Handlebars.compile(document.getElementById('handlebars:queue-item').innerHTML)
     function renderQueueItem(song) {
       let icon = 'music'
@@ -79,92 +145,28 @@
       })).data(song)
     }
 
+    /* Queue and item from the history when it's clicked. */
     function onQueueItemClick() {
-      // If an item in the history is clicked, we queue it again.
-      let item = this.parentNode.parentNode;
+      let item = this.parentNode.parentNode
       if (item.parentNode.id == 'history') {
-        let song = $(item).data();
-        let form = $('#add-song-form')
-        $('input[name="url"]', form)[0].value = song.url
-        form.submit()
+        let song = $(item).data()
+        Musicroom.emit('put song', song.url)
       }
     }
 
-    // Load the queued items and room history.
-    d3.json("/api/queue?room={{room.name}}", function (data) {
-      console.log('QUEUE:', data.data)
-      for (let i = 0; i < data.data.length; ++i) {
-        $('#queue').append(renderQueueItem(data.data[i]))
-      }
-    })
-    d3.json("/api/history?room={{room.name}}", function (data) {
-      console.log('history:', data.data)
-      for (let i = 0; i < data.data.length; ++i) {
-        $('#history').append(renderQueueItem(data.data[i]))
-      }
-    })
-
-    // Helper function to retrieve the song that is currently being played.
-    function getCurrentSong(callback) {
-      return d3.json("/api/current-song?room={{room.name}}", function (data) {
-        callback(data.data, data.status, data.message)
-      })
-    }
-
-    // Helper function to send a post request.
-    function post(url, form, callback) {
-      let data = $.param(form);
-      console.log(data)
-      return d3.request(url)
-        .header("Content-type", "application/x-www-form-urlencoded")
-        .on("error", function(progress) { if (callback) callback(progress.target, progress) })
-        .on("load", function(xhr) { if (callback) callback(xhr) })
-        .send("POST", data)
-    }
-
-    // Callback for the "Skip" button.
+    /* Skip the current song. */
     function skipSong() {
-      post("/api/skip-song?room={{room.name}}", {}, function () {
-        updateCurrentSong()
-      })
+      Musicroom.emit('skip song')
     }
 
-    // Callback for the "Add a Song" form.
+    /* Callback for the "Submit" URL form. */
     function submitSongUrl(event) {
       event.preventDefault()
-      let form = {}
-      d3.selectAll("#add-song-form input").each(function (d) {
-        form[this.name] = this.value
-      })
-      post("/api/submit", form, function(xhr, progress) {
-        let data = JSON.parse(xhr.responseText)
-        let song = data.data;
-
-        /* Remove all existing classes. */
-        let message = d3.select('.head .ui.message')
-          .classed('positive', false)
-          .classed('negative', false)
-          .classed('info', false)
-
-        /* Insert the message with the right class. */
-        $(message.node()).show()
-        if (data.status == 200) {
-          if (song.already_in_queue)
-            message.classed('info', true).text('The song is already in the queue: ' + song.title)
-          else
-            message.classed('positive', true).text('The song was added to the queue.')
-        }
-        else {
-          message.classed('negative', true).text(data.message)
-        }
-
-        if (data.status == 200 && !song.already_in_queue) {
-          $('#queue').append(renderQueueItem(song))
-        }
-      })
+      let url = $('form#add-song-form input[name="url"]')[0].value
+      Musicroom.emit('put song', url)
     }
 
-    // Sets the title above the Player.
+    /* Sets the title above the Player. */
     function setPlayerTitle(title) {
       let h2 = document.querySelector('.head .player .current-title')
       if (title) {
@@ -220,9 +222,6 @@
 
     function onYoutTubePlayerStateChange () {
       let state = yt_player.getPlayerState()
-      if (state == 0) { // Ended
-        updateCurrentSong()
-      }
       console.log('YT Player: state changed', state)
     }
 
@@ -232,41 +231,5 @@
         yt_delayedPlay = null
       }
     }
-
-
-    function updateCurrentSong() {
-      getCurrentSong(function (new_song) {
-        if (new_song) {
-          /* If the song is going to end soon, we update again, soon. */
-          let remaining = new_song.duration - new_song.time_passed
-          if (remaining < 5) {
-            console.log("Song is about to end soon. Retrying update in", remaining + 0.5, "seconds.")
-            setTimeout(updateCurrentSong, (remaining + 0.5) * 1000)
-          }
-
-          /* If it's the same song, there's no need to update. */
-          if (song && new_song.id == song.id) {
-            console.log("Got the same song. Skipping player update")
-            return
-          }
-
-          song = new_song
-          setPlayerTitle(song.title)
-          if (song.classtype == 'YtSong') {
-            youTubePlay()
-          }
-        }
-        else {
-          if (yt_player) yt_player.stopVideo()
-          setPlayerTitle(null)
-          youTubeShow(false)
-
-          console.log("We really don't have anything to play. Check again in 2s")
-          setTimeout(updateCurrentSong, 2000)
-        }
-      })
-    }
-
-    updateCurrentSong()
   </script>
-  {% endblock %}
+{% endblock %}

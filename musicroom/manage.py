@@ -1,7 +1,7 @@
 
 import argparse
 import {db} from './models'
-import {app} from './app'
+import {app, sio} from './app'
 import conf from '../conf'
 
 app.config['SECRET_KEY'] = conf.secret_key
@@ -16,8 +16,12 @@ def main():
     db.drop_all_tables(with_all_data=True)
     return
 
+  sio.run(app, host=conf.host, port=conf.port, debug=conf.debug)
+  return
 
-  app.run(host=conf.host, port=conf.port, debug=conf.debug)
+  #werkzeug.serving.run_simple(conf.host, conf.port, wsgi,
+  #  use_reloader=conf.debug, use_debugger=conf.debug)
+  eventlet.wsgi.server(eventlet.listen((conf.host, conf.port)), wsgi)
 
 
 if require.main == module:

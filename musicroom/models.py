@@ -42,6 +42,17 @@ class Room(db.Entity):
   history = Set('Song')
   queue = Set('Song')
 
+  @property
+  def song_time_passed(self):
+    return datetime.now() - self.song_starttime
+
+  def add_song(self, song):
+    if song in self.queue:
+      return False
+    else:
+      self.queue.add(song)
+      return True
+
   def skip_song(self):
     """
     Skips the current song.
@@ -79,7 +90,7 @@ class Room(db.Entity):
           break
 
         # Discard this song into the rooms history.
-        time_passed -= current_duration + conf.seconds_between_songs
+        time_passed -= current_duration + timedelta(seconds=conf.seconds_between_songs)
         self.history.add(song)
         song = self.queue.select().first()
         if song:

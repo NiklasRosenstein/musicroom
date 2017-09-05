@@ -20,6 +20,7 @@
 
 from datetime import datetime, timedelta
 from flask import request
+from flask_socketio import SocketIO, emit, join_room
 from pony.orm import db_session, commit
 from urllib.parse import urlparse, parse_qs
 
@@ -29,6 +30,7 @@ import flask
 import json
 import os
 import random
+import socketio
 import decorators from './decorators'
 import models from './models'
 import youtube from './youtube'
@@ -36,6 +38,104 @@ import namegen from './namegen'
 
 
 app = flask.Flask(__name__, root_path=__directory__)
+sio = SocketIO(app)
+
+
+@sio.on('connect')
+def connect():
+  pass
+
+
+@sio.on('join')
+def join(room_name):
+  join_room(room_name)
+
+
+@sio.on('get current song')
+@db_session
+def current_song(room_name):
+  room = models.Room.get(name=room_name)
+  if room:
+    song = room.song
+    if song:
+      data = song.to_dict()
+      data['time_passed'] = room.song_time_passed.total_seconds()
+      emit('current song', data)
+
+
+@sio.on('get queue and history')
+@db_session
+def queue_and_history(room_name):
+  room = models.Room.get(name=room_name)
+  if room:
+    queue = [x.to_dict() for x in room.queue]
+    history = [x.to_dict() for x in room.history]
+    emit('queue and history', {'queue': queue, 'history': history})
+
+
+@sio.on('skip song')
+@db_session
+def skip(room_name):
+  room = models.Room.get(name=room_name)
+  if room:
+    room.skip_song()
+    emit('song skipped')
+
+
+@sio.on('put song')
+@db_session
+def put_song(room_name, url):
+  room = models.Room.get(name=room_name)
+  if not room:
+    emit('put song', {'error': 'Invalid room: {!r}'.format(room)})
+    return
+
+  url = urlparse(url)
+
+  # Validate the URL scheme and host.
+  HOSTS = ['www.youtube.com', 'youtube.com', 'youtu.be']
+  if url.scheme not in ('', 'http', 'https') or url.netloc not in HOSTS:
+    emit('put song', {'error': 'Not a Youtube URL'})
+    return
+
+  # Parse the Youtube Video ID.
+  if 'youtube' in url.netloc:
+    query = parse_qs(url.query)
+    if 'v' not in query or len(query['v']) != 1:
+      emit('put song', {'error': "This is a YouTube URL, but it looks like there's not Video ID."})
+      return
+    yt_video_id = query['v'][0]
+  elif 'youtu.be' in url.netloc:
+    yt_video_id = url.path.lstrip('/')
+  else:
+    yt_video_id = None
+
+  # Create/update the YouTube Song.
+  if yt_video_id:
+    try:
+      video = youtube.video(yt_video_id)
+    except ValueError as e:
+      emit('put song', {'error': str(e)})
+      return
+
+    song = models.create_or_update(
+      models.YtSong,
+      filter_keys = ['video_id'],
+      title = video['snippet']['title'],
+      video_id = video['id'],
+      duration = youtube.parse_duration(video['contentDetails']['duration'])
+    )
+    commit()
+
+  else:
+    raise RuntimeError
+
+  added = room.add_song(song)
+  commit()
+  if added:
+    emit('put song', {'song': song.to_dict()})
+  else:
+    emit('put song', {'error': "Song is already in queue: " + song.title})
 
 
 @app.route('/')
@@ -61,133 +161,3 @@ def room(room_name):
     commit()
 
   return flask.render_template('room.html', room=room)
-
-
-@app.route('/api/queue')
-@decorators.restify()
-@db_session
-def queue():
-  """
-  Returns a JSON representation of the the songs in the queue.
-  """
-
-  room = models.Room.get(name=request.args.get('room'))
-  if not room:
-    return None, 404
-
-  return [x.to_dict() for x in room.queue]
-
-
-@app.route('/api/history')
-@decorators.restify()
-@db_session
-def history():
-  """
-  Returns a JSON representation of the the songs in the history.
-  """
-
-  room = models.Room.get(name=request.args.get('room'))
-  if not room:
-    return None, 404
-
-  return [x.to_dict() for x in room.history]
-
-
-@app.route('/api/skip-song', methods=['POST'])
-@decorators.restify()
-@db_session
-def skip_song():
-  """
-  Skips the currently played song.
-  """
-
-  room = models.Room.get(name=request.args.get('room'))
-  if not room:
-    return None, 404
-
-  room.skip_song()
-
-
-@app.route('/api/current-song')
-@decorators.restify()
-@db_session
-def current_song():
-  """
-  Updates the room's currently played song and returns it.
-  """
-
-  room = models.Room.get(name=request.args.get('room'))
-  if not room:
-    return None, 404
-
-  song, time_passed = room.update_song()
-  commit()
-
-  if song:
-    result = song.to_dict()
-    result['time_passed'] = time_passed.total_seconds()
-  else:
-    result = {}
-  return result
-
-
-@app.route('/api/submit', methods=['POST'])
-@decorators.restify()
-@db_session
-def submit():
-  """
-  REST end-point to add a song to the queue of a room.
-  """
-
-  if not 'room' in request.form or not 'url' in request.form:
-    return None, 400, "Invalid form parameters"
-
-  room = models.Room.get(name=request.form['room'])
-  if not room:
-    return None, 400, "Invalid room {!r}".format(request.form['room'])
-
-  url = urlparse(request.form['url'])
-
-  # Validate the URL scheme and host.
-  HOSTS = ['www.youtube.com', 'youtube.com', 'youtu.be']
-  if url.scheme not in ('', 'http', 'https') or url.netloc not in HOSTS:
-    return None, 400, "Not a YouTube URL."
-
-  # Parse the Youtube Video ID.
-  if 'youtube' in url.netloc:
-    query = parse_qs(url.query)
-    if 'v' not in query or len(query['v']) != 1:
-      return None, 400, "This is a YouTube URL, but it looks like there's not Video ID."
-    yt_video_id = query['v'][0]
-  elif 'youtu.be' in url.netloc:
-    yt_video_id = url.path.lstrip('/')
-  else:
-    yt_video_id = None
-
-  # Create/update the YouTube Song.
-  if yt_video_id:
-    try:
-      video = youtube.video(yt_video_id)
-    except ValueError as e:
-      return None, 400, str(e)
-
-    song = models.create_or_update(
-      models.YtSong,
-      filter_keys = ['video_id'],
-      title = video['snippet']['title'],
-      video_id = video['id'],
-      duration = youtube.parse_duration(video['contentDetails']['duration'])
-    )
-    commit()
-
-  else:
-    raise RuntimeError
-
-  # Check if the song is already in the rooms queue.
-  result = song.to_dict()
-  result['already_in_queue'] = song in room.queue
-  if not result['already_in_queue']:
-    room.queue.add(song)
-
-  commit()
-  return result, 200
