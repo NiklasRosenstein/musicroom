@@ -20,6 +20,7 @@
 
 from pony.orm import *
 from datetime import datetime, timedelta
+import heapq
 import conf from '../conf'
 
 db = Database()
@@ -43,7 +44,7 @@ class Room(db.Entity):
   queue = Set('Song')
 
   @property
-  def song_time_passed(self):
+  def time_passed(self):
     return datetime.now() - self.song_starttime
 
   def add_song(self, song):

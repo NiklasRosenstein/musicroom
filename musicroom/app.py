@@ -27,6 +27,7 @@ from urllib.parse import urlparse, parse_qs
 import collections
 import contextlib
 import flask
+import functools
 import json
 import os
 import random
@@ -35,10 +36,27 @@ import decorators from './decorators'
 import models from './models'
 import youtube from './youtube'
 import namegen from './namegen'
+import {TimedQueue} from './timedqueue'
 
 
+queue = TimedQueue()
 app = flask.Flask(__name__, root_path=__directory__)
 sio = SocketIO(app)
+
+
+def update_room(room):
+  """
+  Called from the #queue when a song in a room has finished.
+  """
+
+  print('>> update_room({!r})'.format(room))
+  with db_session():
+    room.update_song()
+    commit()
+
+  if room.song:
+    ttl = room.song.duration - room.time_passed.total_seconds()
+    queue.put(ttl, functools.partial(update_room, room))
 
 
 @sio.on('connect')
@@ -59,7 +77,7 @@ def current_song(room_name):
     song = room.song
     if song:
       data = song.to_dict()
-      data['time_passed'] = room.song_time_passed.total_seconds()
+      data['time_passed'] = room.time_passed.total_seconds()
       emit('current song', data)
 
 
@@ -136,6 +154,9 @@ def put_song(room_name, url):
     emit('put song', {'song': song.to_dict()})
   else:
     emit('put song', {'error': "Song is already in queue: " + song.title})
+
+  if not room.song:
+    update_room(room)
 
 
 @app.route('/')
