@@ -82,48 +82,13 @@ def skip(room_name):
 
 @sio.on('put song')
 @db_session
-def put_song(room_name, url):
-  room = models.Room.get(name=room_name)
-  if not room:
-    emit('put song', {'error': 'Invalid room: {!r}'.format(room)})
-    return
-
-  url = urlparse(url)
-
-  # Validate the URL scheme and host.
-  HOSTS = ['www.youtube.com', 'youtube.com', 'youtu.be']
-  if url.scheme not in ('', 'http', 'https') or url.netloc not in HOSTS:
-    emit('put song', {'error': 'Not a Youtube URL'})
-    return
-
-  # Parse the Youtube Video ID.
-  if 'youtube' in url.netloc:
-    query = parse_qs(url.query)
-    if 'v' not in query or len(query['v']) != 1:
-      emit('put song', {'error': "This is a YouTube URL, but it looks like there's not Video ID."})
-      return
-    yt_video_id = query['v'][0]
-  elif 'youtu.be' in url.netloc:
-    yt_video_id = url.path.lstrip('/')
+def put_song_sio(room_name, url):
+  try:
+    song = _put_song(room_name, url)
+  except ValueError as e:
+    emit('put song', {'error': str(e)})
   else:
-    yt_video_id = None
-
-  # Create/update the YouTube Song.
-  if yt_video_id:
-    song = models.YtSong.from_video_id(yt_video_id)
-  else:
-    raise RuntimeError
-
-  added = room.add_song(song)
-  if added:
     emit('put song', {'song': song.to_dict()})
-  else:
-    emit('put song', {'error': "Song is already in queue: " + song.title})
-
-  if not room.song:
-    room.update_song()
-    room.emit_current_song()
-  room.add_to_schedule()
 
 
 @app.route('/')
@@ -148,3 +113,58 @@ def room(room_name):
     room = models.Room(name=room_name)
 
   return flask.render_template('room.html', room=room)
+
+
+@app.route('/room/<room_name>/put')
+@decorators.restify()
+@db_session
+def put_song_api(room_name):
+  url = request.args.get('url')
+  if not url:
+    flask.abort(404)
+  try:
+    song = _put_song(room_name, url)
+  except ValueError as e:
+    return {'error': str(e)}
+  else:
+    return {'song': song.to_dict()}
+
+
+def _put_song(room_name, url):
+  room = models.Room.get(name=room_name)
+  if not room:
+    raise ValueError('invalid room: {!r}'.format(room))
+
+  url = urlparse(url)
+
+  # Validate the URL scheme and host.
+  HOSTS = ['www.youtube.com', 'youtube.com', 'youtu.be']
+  if url.scheme not in ('', 'http', 'https') or url.netloc not in HOSTS:
+    raise ValueError('not a youtube url')
+
+  # Parse the Youtube Video ID.
+  if 'youtube' in url.netloc:
+    query = parse_qs(url.query)
+    if 'v' not in query or len(query['v']) != 1:
+      raise ValueError("This is a YouTube URL, but it looks like there's not Video ID.")
+    yt_video_id = query['v'][0]
+  elif 'youtu.be' in url.netloc:
+    yt_video_id = url.path.lstrip('/')
+  else:
+    yt_video_id = None
+
+  # Create/update the YouTube Song.
+  if yt_video_id:
+    song = models.YtSong.from_video_id(yt_video_id)
+  else:
+    raise RuntimeError
+
+  added = room.add_song(song)
+  if not added:
+    raise ValueError("Song is already in queue: " + song.title)
+
+  if not room.song:
+    room.update_song()
+    room.emit_current_song()
+  room.add_to_schedule()
+  return song
