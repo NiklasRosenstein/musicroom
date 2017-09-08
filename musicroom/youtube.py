@@ -41,7 +41,7 @@ def parse_duration(duration):
   https://developers.google.com/youtube/v3/docs/videos#contentDetails.duration
   """
 
-  match = re.match('P(\d+D)?T(\d+H)?(\d+M)?(\d+S)', duration)
+  match = re.match('P(\d+D)?T(\d+H)?(\d+M)?(\d+S)?', duration)
   if not match:
     raise ValueError('invalid duration: {!r}'.format(duration))
   days, hours, minutes, seconds = [int(x[:-1]) if x else 0 for x in match.groups()]
