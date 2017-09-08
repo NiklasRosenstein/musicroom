@@ -82,8 +82,6 @@ class Room(db.Entity):
     since the song started. If there is not current song, both will be #None.
     """
 
-    print('@update_song({!r}):'.format(self))
-
     now = datetime.now()
     song = self.song
 
@@ -119,11 +117,6 @@ class Room(db.Entity):
     # playing, or the other way round.
     assert bool(song) == (time_passed is not None)
 
-    print('  song:', song.title if song else None)
-    if song:
-      print('    duration:', song.duration)
-      print('    time_passed:', time_passed.total_seconds())
-
     self.song = song
     self.song_starttime = now - time_passed if time_passed is not None else None
 
@@ -146,7 +139,6 @@ class Room(db.Entity):
     if self.song:
       ttl = self.song.duration - self.time_passed.total_seconds()
       worker = functools.partial(worker, self)
-      print('@scheduled', self.name)
       room_update_schedule.put(ttl, worker, key=self.name)
 
 
