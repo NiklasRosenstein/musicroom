@@ -36,27 +36,10 @@ import decorators from './decorators'
 import models from './models'
 import youtube from './youtube'
 import namegen from './namegen'
-import {TimedQueue} from './timedqueue'
+import {Scheduler} from './utils/scheduler'
 
-
-queue = TimedQueue()
 app = flask.Flask(__name__, root_path=__directory__)
 sio = SocketIO(app)
-
-
-def update_room(room):
-  """
-  Called from the #queue when a song in a room has finished.
-  """
-
-  print('>> update_room({!r})'.format(room))
-  with db_session():
-    room.update_song()
-    commit()
-
-  if room.song:
-    ttl = room.song.duration - room.time_passed.total_seconds()
-    queue.put(ttl, functools.partial(update_room, room))
 
 
 @sio.on('connect')
@@ -130,21 +113,7 @@ def put_song(room_name, url):
 
   # Create/update the YouTube Song.
   if yt_video_id:
-    try:
-      video = youtube.video(yt_video_id)
-    except ValueError as e:
-      emit('put song', {'error': str(e)})
-      return
-
-    song = models.create_or_update(
-      models.YtSong,
-      filter_keys = ['video_id'],
-      title = video['snippet']['title'],
-      video_id = video['id'],
-      duration = youtube.parse_duration(video['contentDetails']['duration'])
-    )
-    commit()
-
+    song = models.YtSong.from_video_id(yt_video_id)
   else:
     raise RuntimeError
 

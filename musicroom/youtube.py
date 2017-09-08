@@ -45,4 +45,4 @@ def parse_duration(duration):
   if not match:
     raise ValueError('invalid duration: {!r}'.format(duration))
   days, hours, minutes, seconds = [int(x[:-1]) if x else 0 for x in match.groups()]
-  return seconds + minutes * 60 + hours * 3600 + hours * 86400
+  return seconds + minutes * 60 + hours * 3600 + days * 86400

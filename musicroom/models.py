@@ -20,10 +20,14 @@
 
 from pony.orm import *
 from datetime import datetime, timedelta
-import heapq
+
+import functools
 import conf from '../conf'
+import {Scheduler} from './utils/scheduler'
+import youtube from './youtube'
 
 db = Database()
+room_update_schedule = Scheduler()
 
 
 def create_or_update(model, filter_keys, **kwargs):
@@ -59,7 +63,7 @@ class Room(db.Entity):
     Skips the current song.
     """
 
-    song = room.queue.select().first()
+    song = self.queue.select().first()
     if song:
       self.history.add(song)
       self.queue.remove(song)
@@ -77,6 +81,8 @@ class Room(db.Entity):
     Returns a tuple of the current song and the number of seconds passed
     since the song started. If there is not current song, both will be #None.
     """
+
+    print('@update_song({!r}):'.format(self))
 
     now = datetime.now()
     song = self.song
@@ -113,10 +119,35 @@ class Room(db.Entity):
     # playing, or the other way round.
     assert bool(song) == (time_passed is not None)
 
+    print('  song:', song.title if song else None)
+    if song:
+      print('    duration:', song.duration)
+      print('    time_passed:', time_passed.total_seconds())
+
     self.song = song
     self.song_starttime = now - time_passed if time_passed is not None else None
 
     return song, time_passed
+
+  def add_to_schedule(self):
+    """
+    Adds this room the the #room_update_schedule so that the next song will
+    be played right when the current finished.
+    """
+
+    @db_session
+    def worker(self):
+      # Since we're in a separate thread, we need a new session and a new
+      # object that is attached to that new session.
+      self = Room[self.name]
+      self.skip_song()
+      self.add_to_schedule()
+
+    if self.song:
+      ttl = self.song.duration - self.time_passed.total_seconds()
+      worker = functools.partial(worker, self)
+      print('@scheduled', self.name)
+      room_update_schedule.put(ttl, worker, key=self.name)
 
 
 class Song(db.Entity):
@@ -139,6 +170,22 @@ class YtSong(Song):
   @property
   def url(self):
     return 'https://youtu.be/' + self.video_id
+
+  @classmethod
+  def from_video_id(cls, video_id):
+    try:
+      video = youtube.video(video_id)
+    except ValueError as e:
+      emit('put song', {'error': str(e)})
+      return
+
+    return create_or_update(
+      cls,
+      filter_keys = ['video_id'],
+      title = video['snippet']['title'],
+      video_id = video['id'],
+      duration = youtube.parse_duration(video['contentDetails']['duration'])
+    )
 
 
 db.bind(**conf.database)
