@@ -21,7 +21,7 @@
 from datetime import datetime, timedelta
 from flask import request
 from flask_socketio import SocketIO, emit, join_room
-from pony.orm import db_session, commit
+from pony.orm import db_session
 from urllib.parse import urlparse, parse_qs
 
 import collections
@@ -39,7 +39,7 @@ import namegen from './namegen'
 import {Scheduler} from './utils/scheduler'
 
 app = flask.Flask(__name__, root_path=__directory__)
-sio = SocketIO(app)
+sio = SocketIO(app, async_mode='threading')
 
 
 @sio.on('connect')
@@ -57,11 +57,7 @@ def join(room_name):
 def current_song(room_name):
   room = models.Room.get(name=room_name)
   if room:
-    song = room.song
-    if song:
-      data = song.to_dict()
-      data['time_passed'] = room.time_passed.total_seconds()
-      emit('current song', data)
+    room.emit_current_song(broadcast=False)
 
 
 @sio.on('get queue and history')
@@ -80,7 +76,8 @@ def skip(room_name):
   room = models.Room.get(name=room_name)
   if room:
     room.skip_song()
-    emit('song skipped')
+    room.add_to_schedule()
+    room.emit_current_song()
 
 
 @sio.on('put song')
@@ -118,14 +115,15 @@ def put_song(room_name, url):
     raise RuntimeError
 
   added = room.add_song(song)
-  commit()
   if added:
     emit('put song', {'song': song.to_dict()})
   else:
     emit('put song', {'error': "Song is already in queue: " + song.title})
 
   if not room.song:
-    update_room(room)
+    room.update_song()
+    room.emit_current_song()
+  room.add_to_schedule()
 
 
 @app.route('/')
@@ -148,6 +146,5 @@ def room(room_name):
   room = models.Room.get(name=room_name)
   if not room:
     room = models.Room(name=room_name)
-    commit()
 
   return flask.render_template('room.html', room=room)

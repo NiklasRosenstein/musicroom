@@ -135,11 +135,28 @@ class Room(db.Entity):
       self = Room[self.name]
       self.skip_song()
       self.add_to_schedule()
+      self.emit_current_song()
 
     if self.song:
       ttl = self.song.duration - self.time_passed.total_seconds()
       worker = functools.partial(worker, self)
       room_update_schedule.put(ttl, worker, key=self.name)
+    else:
+      room_update_schedule.remove(self.name)
+
+  def emit_current_song(self, broadcast=True):
+    """
+    Emits a `current song` Socket.IO event.
+    """
+
+    song = self.song
+    if song:
+      data = song.to_dict()
+      data['time_passed'] = self.time_passed.total_seconds()
+    else:
+      data = None
+
+    sio.emit('current song', data, room=self.name if broadcast else None)
 
 
 class Song(db.Entity):
@@ -182,3 +199,6 @@ class YtSong(Song):
 
 db.bind(**conf.database)
 db.generate_mapping(create_tables=True)
+
+
+import {sio, app} from './app'

@@ -87,7 +87,7 @@ class Scheduler:
     with self._rlock:
       queue = self._queue
       offset = 0
-      for index in enumerate(self._queue):
+      for index in range(len(self._queue)):
         event = queue[index - offset]
         if event.key == key:
           del queue[index - offset]
