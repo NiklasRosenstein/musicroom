@@ -134,6 +134,22 @@
       $(message.node()).show()
     })
 
+    document.body.addEventListener('paste', function (event) {
+      let data = (event.clipboardData || window.clipboardData)
+      if (event.target.nodeName == 'INPUT' || event.target.nodeName == 'TEXTAREA') {
+        return;
+      }
+
+      let text = data.getData('Text')
+      let parser = document.createElement('a')
+      parser.href = text
+      if (parser.protocol && parser.hostname && parser.pathname) {
+        // Seems to be a valid URL, add it to the form and try to submit it.
+        $('form#add-song-form input[name="url"]')[0].value = data
+        submitSongUrl()
+      }
+    })
+
     /* Render the Handlebars template for an item in the queue or history. */
     var queueItemTemplate = Handlebars.compile(document.getElementById('handlebars:queue-item').innerHTML)
     function renderQueueItem(song) {
@@ -162,7 +178,7 @@
 
     /* Callback for the "Submit" URL form. */
     function submitSongUrl(event) {
-      event.preventDefault()
+      if (event) event.preventDefault()
       let url = $('form#add-song-form input[name="url"]')[0].value
       Musicroom.emit('put song', url)
     }
