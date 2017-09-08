@@ -19,10 +19,14 @@
       </div>
     </form>
     <script>
+      var roomNameValidate = '{{room_name_validate|replace("\\", "\\\\")|safe}}';
       function gotoRoom(event) {
         event.preventDefault()
         var roomName = document.querySelector('form input[name="room-name"]').value
-        if (roomName) {
+        if (!roomName.match(roomNameValidate)) {
+          alert("Invalid room name.");
+        }
+        else if (roomName) {
           document.location = "/room/" + roomName
         }
       }

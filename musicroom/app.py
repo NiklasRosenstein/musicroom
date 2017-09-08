@@ -31,7 +31,10 @@ import functools
 import json
 import os
 import random
+import re
 import socketio
+
+import conf from '../conf'
 import decorators from './decorators'
 import models from './models'
 import youtube from './youtube'
@@ -98,7 +101,8 @@ def index():
   """
 
   funny_name = namegen()
-  return flask.render_template('index.html', funny_name=funny_name)
+  return flask.render_template('index.html', funny_name=funny_name,
+    room_name_validate=conf.room_name_validate)
 
 
 @app.route('/room/<room_name>')
@@ -107,6 +111,9 @@ def room(room_name):
   """
   Visiting a room automatically creates it if it doesn't already exist.
   """
+
+  if not re.match(conf.room_name_validate, room_name):
+    flask.abort(404)
 
   room = models.Room.get(name=room_name)
   if not room:
