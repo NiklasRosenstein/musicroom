@@ -24,11 +24,14 @@ you all want to enjoy.
 * [PostgreSQL](https://www.postgresql.org/)
 * JavaScript
   * [YouTube Player API](https://developers.google.com/youtube/v3/docs/videos/list)
+  * [Socket.IO](https://socket.io/)
   * [jQuery](https://jquery.com/)
-  * [d3](https://d3js.org/)
-  * [Handlebars](http://handlebarsjs.com/)
+  * [d3](https://d3js.org/) \*
+  * [Handlebars](http://handlebarsjs.com/) \*
 * Css
   * [Semantic UI](https://semantic-ui.com/download)
+
+*\* Dependencies to be removed from the project.*
 
 ## Configuration
 
