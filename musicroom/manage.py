@@ -1,11 +1,6 @@
 
 from pony.orm import db_session
 import argparse
-import models, {db} from './models'
-import {app, sio} from './app'
-import conf from '../conf'
-
-app.config['SECRET_KEY'] = conf.secret_key
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--production', action='store_true')
@@ -16,6 +11,18 @@ parser.add_argument('--update-song-metadata', action='store_true')
 
 def main():
   args = parser.parse_args()
+
+  import conf from '../conf'
+  if args.production:
+    conf.debug = False
+  elif args.development:
+    conf.debug = True
+
+  import models, {db} from './models'
+  import {app, sio} from './app'
+
+  app.config['SECRET_KEY'] = conf.secret_key
+
   if args.drop_all:
     print('Aye, sir! Dropping all our data out tha window!')
     db.drop_all_tables(with_all_data=True)
@@ -38,11 +45,6 @@ def main():
     for room in models.Room.select():
       room.update_song()
       room.add_to_schedule()
-
-  if args.production:
-    conf.debug = False
-  elif args.development:
-    conf.debug = True
 
   # TODO: Don't start queue in the main reloader process.
   models.room_update_schedule.start(daemon=True)
