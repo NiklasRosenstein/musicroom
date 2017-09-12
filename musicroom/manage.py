@@ -8,6 +8,8 @@ import conf from '../conf'
 app.config['SECRET_KEY'] = conf.secret_key
 
 parser = argparse.ArgumentParser()
+parser.add_argument('--production', action='store_true')
+parser.add_argument('--development', action='store_true')
 parser.add_argument('--drop-all', action='store_true')
 parser.add_argument('--update-song-metadata', action='store_true')
 
@@ -36,6 +38,11 @@ def main():
     for room in models.Room.select():
       room.update_song()
       room.add_to_schedule()
+
+  if args.production:
+    conf.debug = False
+  elif args.development:
+    conf.debug = True
 
   # TODO: Don't start queue in the main reloader process.
   models.room_update_schedule.start(daemon=True)
