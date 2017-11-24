@@ -1,15 +1,15 @@
 {
-  "name": "mqueue",
+  "name": "@NiklasRosenstein/musicroom",
   "version": "1.0.0",
-  "author": "niklas",
   "license": "MIT",
-  "resolve_root": "musicroom/",
-  "main": "manage.py",
-  "extensions": [
-    "!require-import-syntax",
-    "@nodepy/werkzeug-reloader-patch"
+  "main": "musicroom/manage.py",
+  "authors": [
+    "rosensteinniklas@gmail.com"
   ],
-  "python-dependencies": {
+  "extensions": [
+    "werkzeug-reloader-patch"
+  ],
+  "pip_dependencies": {
     "Flask": ">=0.12.2",
     "Flask-SocketIO": ">=2.9.2",
     "eventlet": ">=0.21.0",
@@ -21,6 +21,6 @@
     "requests": ">=2.18.4"
   },
   "dependencies": {
-    "@nodepy/werkzeug-reloader-patch": "~0.0.4"
+    "werkzeug-reloader-patch": "git+https://github.com/nodepy/werkzeug-reloader-patch.git@v0.0.6"
   }
 }

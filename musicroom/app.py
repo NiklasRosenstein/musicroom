@@ -41,7 +41,7 @@ import youtube from './youtube'
 import namegen from './namegen'
 import {Scheduler} from './utils/scheduler'
 
-app = flask.Flask(__name__, root_path=__directory__)
+app = flask.Flask(__name__, root_path=str(module.directory))
 sio = SocketIO(app, async_mode='threading' if conf.debug else 'gevent')
 
 
