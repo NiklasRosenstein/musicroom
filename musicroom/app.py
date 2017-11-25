@@ -53,6 +53,7 @@ def connect():
 @sio.on('join')
 def join(room_name):
   join_room(room_name)
+  emit('joined')
 
 
 @sio.on('get current song')
@@ -95,7 +96,8 @@ def put_song_sio(room_name, url):
 
 
 @app.route('/')
-def index():
+@app.route('/room/<room_name>')
+def index(room_name=None):
   """
   Presents a form to go to a new room.
   """
@@ -103,23 +105,6 @@ def index():
   funny_name = namegen()
   return flask.render_template('index.html', funny_name=funny_name,
     room_name_validate=conf.room_name_validate)
-
-
-@app.route('/room/<room_name>')
-@db_session
-def room(room_name):
-  """
-  Visiting a room automatically creates it if it doesn't already exist.
-  """
-
-  if not re.match(conf.room_name_validate, room_name):
-    flask.abort(404)
-
-  room = models.Room.get(name=room_name)
-  if not room:
-    room = models.Room(name=room_name)
-
-  return flask.render_template('room.html', room=room)
 
 
 @app.route('/room/<room_name>/put')

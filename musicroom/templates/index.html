@@ -1,35 +1,18 @@
-{% extends "base.html" %}
-{% block head %}
-  <title>Music Room &ndash; Listen to music together with your friends.</title>
-{% endblock %}
-{% block after_head_block %}
-  <div class="ui inverted vertical center aligned segment head"><div class="head-container">
-    <hr/>
-    <form class="ui inverted form" style="display: inline-block" id="get-room-form" onsubmit="gotoRoom(event)">
-      <div class="inline fields">
-        <div class="field">
-          <h1>Get a Room</h1>
-        </div>
-        <div class="field">
-          <input type="text" name="room-name" placeholder="{{funny_name}}" size="30" autofocus>
-        </div>
-        <div class="field">
-          <button class="ui button" type="submit">Go!</button>
-        </div>
-      </div>
-    </form>
+<!DOCTYPE>
+<html>
+  <head>
+    <meta charset=utf8>
+    <!-- Local: TODO Embedd in app bundle-->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  </head>
+  <body>
+    <div id="container"></div>
     <script>
-      var roomNameValidate = '{{room_name_validate|replace("\\", "\\\\")|safe}}';
-      function gotoRoom(event) {
-        event.preventDefault()
-        var roomName = document.querySelector('form input[name="room-name"]').value
-        if (!roomName.match(roomNameValidate)) {
-          alert("Invalid room name.");
-        }
-        else if (roomName) {
-          document.location = "/room/" + roomName
-        }
+      window.MusicRoom = {
+        roomNameValidateRegex: '{{room_name_validate|replace("\\", "\\\\")|safe}}',
+        roomNameSuggestion: '{{funny_name}}'
       }
     </script>
-  </div></div>
-{% endblock %}
+    <script src="{{ url_for('static', filename='bundle.js') }}"></script>
+  </body>
+</html>
