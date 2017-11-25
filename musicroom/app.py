@@ -36,13 +36,15 @@ import socketio
 
 import conf from '../conf'
 import decorators from './decorators'
-import models from './models'
 import youtube from './youtube'
 import namegen from './namegen'
 import {Scheduler} from './utils/scheduler'
 
 app = flask.Flask(__name__, root_path=str(module.directory))
-sio = SocketIO(app, async_mode='threading' if conf.debug else 'gevent')
+app.config['SECRET_KEY'] = conf.secret_key
+sio = SocketIO(app, async_mode='threading' if conf.debug else 'eventlet')
+
+import models from './models'
 
 
 @sio.on('connect')
@@ -160,3 +162,14 @@ def _put_song(room_name, url):
     room.emit_current_song()
   room.add_to_schedule()
   return song
+
+
+def init():
+  # Queue all current songs in all rooms.
+  with db_session():
+    for room in models.Room.select():
+      room.update_song()
+      room.add_to_schedule()
+
+  # TODO: Don't start scheduler in the Werkzeug reloader process.
+  models.room_update_schedule.start(daemon=True)

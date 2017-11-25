@@ -19,9 +19,7 @@ def main():
     conf.debug = True
 
   import models, {db} from './models'
-  import {app, sio} from './app'
-
-  app.config['SECRET_KEY'] = conf.secret_key
+  import {app, sio, init as init_app} from './app'
 
   if args.drop_all:
     print('Aye, sir! Dropping all our data out tha window!')
@@ -40,14 +38,7 @@ def main():
       print()
       return
 
-  # Queue all current songs in all rooms.
-  with db_session():
-    for room in models.Room.select():
-      room.update_song()
-      room.add_to_schedule()
-
-  # TODO: Don't start queue in the main reloader process.
-  models.room_update_schedule.start(daemon=True)
+  init_app()
   sio.run(app, host=conf.host, port=conf.port, debug=conf.debug)
 
 
