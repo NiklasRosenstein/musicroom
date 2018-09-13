@@ -14,7 +14,7 @@ export class RoomPage extends React.Component {
     this.handleCurrentSong = this.handleCurrentSong.bind(this)
     this.handleQueue = this.handleQueue.bind(this)
     this.handleSkipSong = this.handleSkipSong.bind(this)
-    this.handlePlayerReader = this.handlePlayerReader.bind(this)
+    this.handlePlayerReady = this.handlePlayerReady.bind(this)
     this.handleSongQueued = this.handleSongQueued.bind(this)
     this.handleQueueClick = this.handleQueueClick.bind(this)
   }
@@ -46,9 +46,16 @@ export class RoomPage extends React.Component {
       return state
     })
   }
-  handlePlayerReader() {
+  handlePlayerReady() {
     if (this.state.song) {
-      this.youtubePlayer.internalPlayer.seekTo(this.state.song.time_passed)
+      // TODO: Seeking immediately doesn't work. We delay seeking for
+      // a second as a workaround.
+      let yt = this.youtubePlayer;
+      let song = this.state.song;
+      let delay = 500;
+      setTimeout(function() {
+        yt.internalPlayer.seekTo(song.time_passed + (delay / 1000), true)
+      }, delay)
     }
   }
   handleSongQueued(data) {
@@ -87,7 +94,7 @@ export class RoomPage extends React.Component {
               {song? song.title: ''}
             </h2>
             <YouTube id="yt-player" opts={opts} videoId={song?song.video_id:null}
-                ref={x => this.youtubePlayer = x} onReady={this.handlePlayerReader}/>
+                ref={x => this.youtubePlayer = x} onReady={this.handlePlayerReady}/>
           </div>
         </div>
         <div className="ui text container">
