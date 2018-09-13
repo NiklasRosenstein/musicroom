@@ -125,9 +125,11 @@ def put_song_api(room_name):
 
 
 def _put_song(room_name, url):
+  if not re.match(conf.room_name_validate, room_name):
+    raise ValueError('invalid room: {!r}'.format(room))
   room = models.Room.get(name=room_name)
   if not room:
-    raise ValueError('invalid room: {!r}'.format(room))
+    room = models.Room(name=room_name)
 
   url = urlparse(url)
 
