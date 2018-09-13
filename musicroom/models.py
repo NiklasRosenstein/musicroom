@@ -21,10 +21,10 @@
 from pony.orm import *
 from datetime import datetime, timedelta
 
+import conf
 import functools
-import conf from '../conf'
-import {Scheduler} from './utils/scheduler'
-import youtube from './youtube'
+from . import youtube
+from .utils.scheduler import Scheduler
 
 db = Database()
 room_update_schedule = Scheduler()
@@ -200,5 +200,4 @@ class YtSong(Song):
 db.bind(**conf.database)
 db.generate_mapping(create_tables=True)
 
-
-import {sio, app} from './app'
+from .app import app, sio

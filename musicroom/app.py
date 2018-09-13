@@ -34,17 +34,17 @@ import random
 import re
 import socketio
 
-import conf from '../conf'
-import decorators from './decorators'
-import youtube from './youtube'
-import namegen from './namegen'
-import {Scheduler} from './utils/scheduler'
+import conf
+from . import decorators
+from . import youtube
+from .namegen import get as namegen
+from .utils.scheduler import Scheduler
 
-app = flask.Flask(__name__, root_path=str(module.directory))
+app = flask.Flask(__name__, root_path=str(os.path.dirname(__file__)))
 app.config['SECRET_KEY'] = conf.secret_key
 sio = SocketIO(app, async_mode='threading' if conf.debug else 'eventlet')
 
-import models from './models'
+from . import models
 
 
 @sio.on('connect')

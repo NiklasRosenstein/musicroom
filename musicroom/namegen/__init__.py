@@ -23,7 +23,8 @@ import random
 
 
 def _load(fname):
-  with module.directory.joinpath(fname).open() as fp:
+  directory = os.path.dirname(__file__)
+  with open(os.path.join(directory, fname)) as fp:
     words = (x.strip() for x in fp)
     words = [x for x in words if x]
   return words
@@ -36,6 +37,3 @@ nouns = _load('nouns.txt')
 
 def get():
   return '{}-{}-{}'.format(*(map(random.choice, (adverbs, adjectives, nouns))))
-
-
-module.exports = get
