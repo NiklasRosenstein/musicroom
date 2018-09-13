@@ -1,22 +1,24 @@
-## Music Room
+## MusicRoom
 
-  [Node.py]: https://nodepy.org/
   [Flask]: http://flask.pocoo.org/
   [React]: https://reactjs.org/
 
-A [Node.py] + [Flask] + [React] application to collaborate on the YouTube
-playlist. Inspired by https://plug.dj/.
+A [Flask]+[React] application to collaborate on a YouTube playlist.
+Inspired by https://plug.dj/.
 
 <p align="center">
   <img height="400px" src="https://i.imgur.com/MfHd3gc.png" alt="screenshot">
 </p>
 
-### Bundle & Run
+### Getting started
 
-    $ cd web/ && yarn install && yarn run webpack && cd ..
-    $ cp conf.template.py conf.py && $EDITOR conf.py
-    $ pip install nodepy-runtime && nodepy https://nodepy.org/install-pm.py
-    $ nodepy-pm install && nodepy .
+    $ virtualenv .venv -p python3
+    $ . .venv/bin/activate
+    $ pip install -r requirements
+    $ cd web && npm i && cd ..
+    $ cp conf.dev.py conf.py
+    $ python manage.py build
+    $ python manage.py run
 
 ### Get a Google YouTube API Key
 
